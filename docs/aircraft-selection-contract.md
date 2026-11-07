@@ -131,6 +131,10 @@ position_age_s = snapshot_age_s + max(0.0, seen_pos)
   `stale_input` (`reason="feed_stalled"`) and no aircraft is selected, even if
   the file still lists plausible traffic. A dead decoder must produce an empty
   sky, not a portrait of an aircraft that left ten minutes ago.
+- Clock skew, bounded: a `file_now` more than 5.0 s ahead of the caller clock is
+  `invalid_input` (`reason="invalid_now"`) instead of being clamped to age zero,
+  so a frozen future-dated file cannot look live (amendment 13.4). Within that
+  tolerance the arithmetic above still clamps to `0.0`.
 - Boundary rule, applied to every threshold: a value is **stale when it is
   strictly greater than** the limit. `position_age_s == max_position_age_s` is
   fresh. Tests assert both sides of each boundary.
@@ -314,6 +318,7 @@ class SelectionConfig:
     max_message_age_s: float = 30.0
     max_snapshot_age_s: float = 15.0
     ignore_ground: bool = True
+    problems: tuple[str, ...] = ()   # amendment 13.2: load_config problem codes
 
 @dataclass(frozen=True, slots=True)
 class SourceSnapshot:
@@ -460,8 +465,10 @@ values are identical.
 - Same `(snapshot, config, now)` ⇒ identical `SelectionResult` on any platform
   and any run. Nothing consults the system clock, the environment, the file
   mtime, `dict` iteration order or randomness.
-- Array order affects only which duplicate record wins (`duplicate_hex` keeps
-  the first) and the order of `rejected` counts, never the winner.
+- Array order affects the order of `rejected` counts, and — only for a snapshot
+  that lists the same `hex` twice, which neither upstream decoder produces — the
+  identity of the duplicate that is kept (§6 step 3, amendment 13.1). For every
+  snapshot with unique hexes the winner is independent of array order.
 - Distance assertions in tests should use a tolerance (`abs=0.5` m); ranking
   assertions must use exact equality on `hex`.
 
@@ -517,3 +524,136 @@ network, no receiver, no sleeping. Minimum coverage:
 | Geodesic distance (Vincenty/Karney) | Tens of metres of gain against ±2.6 km position uncertainty; extra dependency. |
 | Return `None` / raise on missing data | Callers would each invent an empty-sky policy; states keep it in one place. |
 | Pick the highest / fastest / most interesting aircraft | Not what "overhead" means; the brief asks for a documented distance rule. |
+
+## 13. Contract amendments (implementation)
+
+Four points in §§3–9 were internally inconsistent or silent. This section is the
+normative resolution; the inline text above has been corrected where it
+contradicted these decisions. Implementation card `t_c28b4251`; fixture and
+review cards must follow this section.
+
+### 13.1 Duplicate hex: deterministic per file, not order-independent
+
+§6 step 3 evaluates records in file order and keeps the first record whose
+`hex` is syntactically valid; any later record with that hex is
+`duplicate_hex`, even when the first record is itself rejected later (for
+example `no_position`). "Already processed" therefore means "already consumed
+the hex", not "already became a candidate".
+
+Consequence: the result is a pure function of the file's byte content, but two
+different orderings of a snapshot that lists one hex twice can select different
+aircraft. §9's earlier "never the winner" claim was wrong for that case and has
+been narrowed. Both upstream decoders emit one entry per hex (their state is a
+hex-keyed map), so order independence holds for every real input; a merge
+policy for duplicate records was rejected as invented behaviour for data no
+decoder produces. Fixture tests that assert order independence must use unique
+hexes. The duplicate-keeping rule is itself worth one test: first record wins,
+later ones count `duplicate_hex`.
+
+### 13.2 Configuration problems reach `select()`
+
+§8.4 required `select()` to report `unconfigured` / `config_invalid` for a
+non-empty problem tuple, but the signature gave it no path to that tuple. The
+propagation path is a trailing field on the config object:
+
+```python
+@dataclass(frozen=True, slots=True)
+class SelectionConfig:
+    ...
+    problems: tuple[str, ...] = ()
+```
+
+`load_config()` fills `problems`; `select()` checks it first and returns
+`unconfigured` / `config_invalid` when it is non-empty, before any home or input
+check. Hand-built configs leave it `()` and behave exactly as before, so the
+field is additive and does not change the meaning of the documented defaults.
+
+Environment values are strings by nature, while structured configuration values
+are typed. The two paths are therefore specified separately:
+
+- **Environment** (`PHLIGHT_HOME_LAT`, `PHLIGHT_HOME_LON`,
+  `PHLIGHT_MAX_DISTANCE_KM`): parsed with a strict decimal float parse, then
+  range-checked. A value that fails to parse or fails range produces the
+  corresponding problem code (`home_lat_invalid`, `home_lon_invalid`,
+  `max_distance_invalid`) and the setting falls back to the config value or the
+  default.
+- **Structured mapping**: never coerced. A string where a number belongs is a
+  problem code even though the identical text from the environment is accepted.
+
+Other problem codes: `home_invalid` (home block not a table), `selection_invalid`
+(selection block not a table), `max_position_age_invalid`,
+`max_message_age_invalid`, `max_snapshot_age_invalid`, `ignore_ground_invalid`,
+`config_not_mapping`.
+
+The source path is not part of `SelectionConfig` (it is not a selection
+threshold), so an additive helper resolves it with the same precedence:
+
+```python
+def load_source_path(mapping, *, environ=None) -> tuple[str, tuple[str, ...]]
+```
+
+It returns `(path, problems)` with default `/run/readsb/aircraft.json` and
+honours `PHLIGHT_AIRCRAFT_JSON`. `source_path_invalid` / `source_invalid` are
+its problem codes. A CLI passes the path to `select_from_file` separately.
+
+### 13.3 Absent `seen`
+
+§6 makes an absent `seen` legal (`invalid_timestamp` covers only a `seen` that
+is present and not a finite number) but never said what message age it implies.
+Decision: absent `seen` means "no additional evidence of message staleness", so
+
+```text
+message_age_s = snapshot_age_s        # seen absent
+```
+
+The record is not rejected for that reason, and `AircraftReport.message_age_s`
+is always a float. Both decoders emit `seen` on every entry, so this only
+affects hand-trimmed fixtures; treating absent as infinitely stale would reject
+records that upstream considers fresh.
+
+### 13.4 Bounded future clock skew
+
+`snapshot_age_s = max(0.0, now - file_now)` alone lets a file whose `now` is in
+the future look live indefinitely, because negative ages clamp to zero. Policy:
+
+```text
+if file_now - now > MAX_CLOCK_SKEW_S:      # 5.0 s, strictly greater
+    invalid_input, reason="invalid_now"
+else:
+    snapshot_age_s = max(0.0, now - file_now)
+```
+
+`MAX_CLOCK_SKEW_S = 5.0` is exported from `phlight.aircraft`. The decoder and
+the selector run on one host and share one clock, so a real difference is a
+clock jump (or an RTC-less Pi before NTP sync), not a feed property; 5 s covers
+scheduler jitter without accepting a stale file that was written by a
+fast clock. A rejected future snapshot carries `snapshot_time = file_now`,
+`snapshot_age_s = 0.0`, zero counts and no aircraft. Tests cover `+4.9 s`
+(accepted), `+5.0 s` (accepted, tolerance is inclusive) and `+5.1 s`
+(rejected).
+
+### 13.5 Malformed optional fields and invalid UTF-8 never crash
+
+Optional per-aircraft fields are read defensively and degraded to `None` rather
+than rejecting the aircraft or raising:
+
+| Field | Malformed value | Result |
+| --- | --- | --- |
+| `flight` | non-string | `callsign=None`; string is `rstrip()`ed, all-blank becomes `None` |
+| `alt_baro` | non-number, non-`"ground"`, non-finite | `altitude_ft=None` |
+| `track`, `gs` | non-number or non-finite | `None` |
+| `category`, `type` | non-string or empty | `None` |
+| `gs` (ground test) | non-number | ground clause is false |
+
+Non-dict entries count `invalid_record`. `hex` must be a string matching
+`^~?[0-9a-f]{6}$` after lowercasing. A file whose bytes are not valid UTF-8 is
+`invalid_input` / `json_decode` (the decoder of JSON bytes raises
+`UnicodeDecodeError`, which is mapped to the same state as a syntax error).
+Unicode escapes and non-ASCII `flight` values are preserved, not rejected.
+
+### 13.6 Documentation of the layout actually shipped
+
+`phlight/aircraft/{__init__,model,source,selection,config}.py` as suggested in
+§8, plus `pyproject.toml` (pytest `pythonpath = ["."]`) so `pytest` from the
+repository root imports the package without installation. No third-party
+runtime dependency.
