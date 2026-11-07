@@ -573,12 +573,17 @@ are typed. The two paths are therefore specified separately:
 
 - **Environment** (`PHLIGHT_HOME_LAT`, `PHLIGHT_HOME_LON`,
   `PHLIGHT_MAX_DISTANCE_KM`): parsed with a strict decimal float parse, then
-  range-checked. A value that fails to parse or fails range produces the
-  corresponding problem code (`home_lat_invalid`, `home_lon_invalid`,
-  `max_distance_invalid`) and the setting falls back to the config value or the
-  default.
-- **Structured mapping**: never coerced. A string where a number belongs is a
-  problem code even though the identical text from the environment is accepted.
+  range-checked. Because environment variables outrank the config mapping (§8.4),
+  a valid environment value overrides an invalid mapping value for the same
+  setting without recording a problem code. An environment value that fails to
+  parse or fails range produces the corresponding problem code
+  (`home_lat_invalid`, `home_lon_invalid`, `max_distance_invalid`) and the
+  setting falls back to the valid config value or the default.
+- **Structured mapping**: never coerced. When not overridden by a valid
+  environment variable, a string where a number belongs produces a problem code
+  even though the identical text from the environment is accepted. A non-mapping
+  input to `load_config()` records `config_not_mapping` in both the returned
+  problem tuple and `SelectionConfig.problems`.
 
 Other problem codes: `home_invalid` (home block not a table), `selection_invalid`
 (selection block not a table), `max_position_age_invalid`,

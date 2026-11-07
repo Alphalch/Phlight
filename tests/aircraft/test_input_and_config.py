@@ -280,20 +280,37 @@ def test_load_config_valid_env_distance_overrides_invalid_mapping_without_retain
 
     config, problems = load_config(
         {
-            "home": {"lat": 22.3193, "lon": 114.1694},
+            "home": {"lat": "bad", "lon": 999.0},
             "selection": {"max_distance_km": "bad"},
         },
-        environ={"PHLIGHT_MAX_DISTANCE_KM": "15"},
+        environ={
+            "PHLIGHT_HOME_LAT": "22.3193",
+            "PHLIGHT_HOME_LON": "114.1694",
+            "PHLIGHT_MAX_DISTANCE_KM": "15",
+        },
     )
 
     assert problems == ()
     assert config.problems == ()
+    assert config.home == HomeLocation(lat=22.3193, lon=114.1694)
     assert config.max_distance_km == pytest.approx(15.0, abs=1e-9)
 
     result = select(valid_snapshot, config, now=CONTROLLED_NOW)
     assert result.state == "ok"
     assert result.aircraft is not None
     assert result.aircraft.hex == "780abc"
+
+    # When both mapping and environment are invalid, problem code is recorded once and default is used
+    both_bad_cfg, both_bad_probs = load_config(
+        {
+            "home": {"lat": 22.3193, "lon": 114.1694},
+            "selection": {"max_distance_km": "bad"},
+        },
+        environ={"PHLIGHT_MAX_DISTANCE_KM": "-5"},
+    )
+    assert both_bad_probs == ("max_distance_invalid",)
+    assert both_bad_cfg.problems == ("max_distance_invalid",)
+    assert both_bad_cfg.max_distance_km == pytest.approx(15.0, abs=1e-9)
 
 
 def test_load_config_ignores_receiver_json_style_top_level_coordinates() -> None:
@@ -383,6 +400,14 @@ def test_load_config_invalid_selection_fields_and_env_values_propagate_to_select
     assert res_env.state == "unconfigured"
     assert res_env.reason == "config_invalid"
 
+    # Independent lat/lon validation when env lat and mapping lon are both invalid
+    cfg_home_mixed, probs_home_mixed = load_config(
+        {"home": {"lat": 22.3193, "lon": "bad_lon"}},
+        environ={"PHLIGHT_HOME_LAT": "bad_lat"},
+    )
+    assert cfg_home_mixed.home is None
+    assert probs_home_mixed == ("home_lat_invalid", "home_lon_invalid")
+
 
 def test_load_source_path_precedence_and_validation() -> None:
     """Catches auto-probing decoder paths or wrong env/mapping precedence in load_source_path() (contract §§2.1, 8.4, 13.2)."""
@@ -424,6 +449,14 @@ def test_load_source_path_valid_env_overrides_invalid_mapping_without_retaining_
     )
     assert path_env_over_bad == "/run/dump1090-mutability/aircraft.json"
     assert probs_env_over_bad == ()
+
+    # When both mapping and environment are invalid, source_path_invalid is recorded once
+    path_both_bad, probs_both_bad = load_source_path(
+        {"source": {"aircraft_json": "   "}},
+        environ={"PHLIGHT_AIRCRAFT_JSON": ""},
+    )
+    assert path_both_bad == DEFAULT_SOURCE_PATH
+    assert probs_both_bad == ("source_path_invalid",)
 
 
 def test_result_state_precedence_order() -> None:

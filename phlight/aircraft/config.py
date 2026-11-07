@@ -98,7 +98,8 @@ def load_config(
     problems: list[str] = []
 
     if not isinstance(mapping, Mapping):
-        return SelectionConfig(), ("config_not_mapping",)
+        problems_tuple = ("config_not_mapping",)
+        return SelectionConfig(problems=problems_tuple), problems_tuple
 
     # --- home -------------------------------------------------------------
     home_block = mapping.get("home", _MISSING)
@@ -120,32 +121,39 @@ def load_config(
         home_configured = True
 
     if home_configured and home_usable:
-        lat_value, present = _env_number(environ, ENV_HOME_LAT, "coordinate_lat")
-        if present:
-            home_lat = lat_value if lat_value is not None else _MISSING
+        lat_value, lat_present = _env_number(environ, ENV_HOME_LAT, "coordinate_lat")
+        if lat_present:
             if lat_value is None:
                 problems.append("home_lat_invalid")
                 home_usable = False
-        lon_value, present = _env_number(environ, ENV_HOME_LON, "coordinate_lon")
-        if present:
-            home_lon = lon_value if lon_value is not None else _MISSING
+            else:
+                home_lat = lat_value
+        else:
+            parsed_lat = (
+                _coordinate(home_lat, 90.0) if home_lat is not _MISSING else None
+            )
+            if parsed_lat is None:
+                problems.append("home_lat_invalid")
+                home_usable = False
+            else:
+                home_lat = parsed_lat
+
+        lon_value, lon_present = _env_number(environ, ENV_HOME_LON, "coordinate_lon")
+        if lon_present:
             if lon_value is None:
                 problems.append("home_lon_invalid")
                 home_usable = False
-
-        if home_usable:
-            if home_lat is _MISSING:
-                problems.append("home_lat_invalid")
-                home_usable = False
-            elif not (is_finite_number(home_lat) and -90.0 <= float(home_lat) <= 90.0):
-                problems.append("home_lat_invalid")
-                home_usable = False
-            if home_lon is _MISSING:
+            else:
+                home_lon = lon_value
+        else:
+            parsed_lon = (
+                _coordinate(home_lon, 180.0) if home_lon is not _MISSING else None
+            )
+            if parsed_lon is None:
                 problems.append("home_lon_invalid")
                 home_usable = False
-            elif not (is_finite_number(home_lon) and -180.0 <= float(home_lon) <= 180.0):
-                problems.append("home_lon_invalid")
-                home_usable = False
+            else:
+                home_lon = parsed_lon
 
     home: HomeLocation | None = None
     if home_usable and home_lat is not _MISSING and home_lon is not _MISSING:
@@ -161,9 +169,21 @@ def load_config(
         if selection_block is not _MISSING and selection_block is not None:
             problems.append("selection_invalid")
 
-    max_distance_km = _read_positive(
-        selection, "max_distance_km", "max_distance_invalid", problems
-    )
+    env_distance, present = _env_number(environ, ENV_MAX_DISTANCE_KM, "positive")
+    if present:
+        if env_distance is not None:
+            max_distance_km: float | None = env_distance
+        else:
+            problems.append("max_distance_invalid")
+            raw_distance = selection.get("max_distance_km", _MISSING)
+            max_distance_km = (
+                None if raw_distance is _MISSING else _positive(raw_distance)
+            )
+    else:
+        max_distance_km = _read_positive(
+            selection, "max_distance_km", "max_distance_invalid", problems
+        )
+
     max_position_age_s = _read_non_negative(
         selection, "max_position_age_s", "max_position_age_invalid", problems
     )
@@ -173,13 +193,6 @@ def load_config(
     max_snapshot_age_s = _read_non_negative(
         selection, "max_snapshot_age_s", "max_snapshot_age_invalid", problems
     )
-
-    env_distance, present = _env_number(environ, ENV_MAX_DISTANCE_KM, "positive")
-    if present:
-        if env_distance is None:
-            problems.append("max_distance_invalid")
-        else:
-            max_distance_km = env_distance
 
     ignore_ground = selection.get("ignore_ground", _MISSING)
     if ignore_ground is _MISSING:
@@ -257,22 +270,25 @@ def load_source_path(
     problems: list[str] = []
     path = DEFAULT_SOURCE_PATH
 
+    raw_cfg: object = _MISSING
     if isinstance(mapping, Mapping):
         source_block = mapping.get("source", _MISSING)
         if isinstance(source_block, Mapping):
-            raw = source_block.get("aircraft_json", _MISSING)
-            if raw is not _MISSING:
-                if isinstance(raw, str) and raw.strip():
-                    path = raw
-                else:
-                    problems.append("source_path_invalid")
+            raw_cfg = source_block.get("aircraft_json", _MISSING)
         elif source_block is not _MISSING and source_block is not None:
             problems.append("source_invalid")
 
     if ENV_SOURCE_PATH in environ:
-        raw = environ[ENV_SOURCE_PATH]
-        if isinstance(raw, str) and raw.strip():
-            path = raw
+        raw_env = environ[ENV_SOURCE_PATH]
+        if isinstance(raw_env, str) and raw_env.strip():
+            path = raw_env
+        else:
+            problems.append("source_path_invalid")
+            if isinstance(raw_cfg, str) and raw_cfg.strip():
+                path = raw_cfg
+    elif raw_cfg is not _MISSING:
+        if isinstance(raw_cfg, str) and raw_cfg.strip():
+            path = raw_cfg
         else:
             problems.append("source_path_invalid")
 
