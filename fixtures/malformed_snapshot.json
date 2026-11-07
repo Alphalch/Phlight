@@ -1,0 +1,11 @@
+{
+  "captured_at": 1762500600,
+  "source": "hand-authored deterministic fixture: malformed and missing fields",
+  "aircraft": [
+    {"callsign": "NOPOS", "type_code": "B738"},
+    {"hex": "12", "type_code": "B738"},
+    {"hex": "abc123", "callsign": "BADALT", "type_code": "B738", "altitude_ft": "high", "distance_km": 5.0},
+    {"hex": "abc124", "type_code": "B738", "distance_km": "-", "bearing_deg": 45},
+    {"hex": "ABC126", "type_name": "Airbus A320", "altitude_ft": 8000, "distance_km": 3.1, "bearing_deg": 45, "track_deg": 45, "ground_speed_kt": 200}
+  ]
+}

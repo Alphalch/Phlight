@@ -40,11 +40,20 @@ else:
 Every state other than `ok` — `empty_sky`, `stale_input`, `missing_input`,
 `invalid_input`, `unconfigured` — draws the same empty-sky artwork; the state
 and reason exist for logs and diagnostics. No network or vendor service is
-involved, and the package has no third-party runtime dependency.
+involved. The selection component has no third-party runtime dependency; the
+renderer uses Pillow.
 
 Selection rules, thresholds, configuration keys and environment variables are
 specified in [docs/aircraft-selection-contract.md](docs/aircraft-selection-contract.md);
 §13 records the amendments made during implementation.
+
+## Offline portrait renderer
+
+The renderer creates configurable PNG previews from local JSON. See
+[renderer configuration](docs/renderer-configuration.md) and
+[renderer details](docs/portrait-renderer.md). It is not an automated live
+receiver-to-display pipeline. Its generic silhouettes are not finished
+hand-drawn artwork, and physical display validation has not been performed.
 
 ## Work tracking
 
@@ -56,4 +65,4 @@ The dedicated Hermes Kanban board is `phlight`. The first tasks cover hardware r
 
 ## Status
 
-Project started; no working receiver, display driver, artwork, enclosure, or end-to-end prototype has been verified yet. No hardware has been purchased.
+Offline renderer previews and aircraft selection software exist; no working receiver, display driver, finished artwork, enclosure, or end-to-end prototype has been physically verified. No hardware has been purchased.
