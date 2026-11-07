@@ -459,6 +459,101 @@ def test_load_source_path_valid_env_overrides_invalid_mapping_without_retaining_
     assert probs_both_bad == ("source_path_invalid",)
 
 
+def test_load_config_invalid_env_coordinate_falls_back_to_valid_mapping() -> None:
+    """Catches discarding a valid mapping home when an environment coordinate fails to parse or range (contract §13.2 fallback rule)."""
+    valid_home = {"lat": 1.0, "lon": 2.0}
+
+    # Invalid env latitude: record the code once, keep the mapping coordinate.
+    cfg_lat, probs_lat = load_config(
+        {"home": valid_home}, environ={"PHLIGHT_HOME_LAT": "bad"}
+    )
+    assert cfg_lat.home == HomeLocation(lat=1.0, lon=2.0)
+    assert probs_lat == ("home_lat_invalid",)
+    assert cfg_lat.problems == ("home_lat_invalid",)
+
+    # Out-of-range env latitude behaves like an unparseable one.
+    cfg_range, probs_range = load_config(
+        {"home": valid_home}, environ={"PHLIGHT_HOME_LAT": "91"}
+    )
+    assert cfg_range.home == HomeLocation(lat=1.0, lon=2.0)
+    assert probs_range == ("home_lat_invalid",)
+
+    # Invalid env longitude: same fallback, per coordinate.
+    cfg_lon, probs_lon = load_config(
+        {"home": valid_home}, environ={"PHLIGHT_HOME_LON": "not-a-number"}
+    )
+    assert cfg_lon.home == HomeLocation(lat=1.0, lon=2.0)
+    assert probs_lon == ("home_lon_invalid",)
+
+    # Both environment coordinates invalid: both codes, mapping home preserved.
+    cfg_both, probs_both = load_config(
+        {"home": valid_home},
+        environ={"PHLIGHT_HOME_LAT": "bad", "PHLIGHT_HOME_LON": "bad"},
+    )
+    assert cfg_both.home == HomeLocation(lat=1.0, lon=2.0)
+    assert probs_both == ("home_lat_invalid", "home_lon_invalid")
+
+    # A bad env latitude still reports a bad mapping longitude exactly once and
+    # leaves no home to use.
+    cfg_unusable, probs_unusable = load_config(
+        {"home": {"lat": 1.0, "lon": "bad"}}, environ={"PHLIGHT_HOME_LAT": "bad"}
+    )
+    assert cfg_unusable.home is None
+    assert probs_unusable == ("home_lat_invalid", "home_lon_invalid")
+
+    # No valid fallback anywhere: one code per setting, no duplicates.
+    cfg_none, probs_none = load_config(
+        {"home": {"lat": "bad", "lon": "bad"}},
+        environ={"PHLIGHT_HOME_LAT": "bad", "PHLIGHT_HOME_LON": "bad"},
+    )
+    assert cfg_none.home is None
+    assert probs_none == ("home_lat_invalid", "home_lon_invalid")
+
+    # The problem still reaches select() as unconfigured/config_invalid.
+    res = select(make_snapshot([]), cfg_lat, now=CONTROLLED_NOW)
+    assert res.state == "unconfigured"
+    assert res.reason == "config_invalid"
+
+    # A bad environment string never outranks the mapping by becoming the home.
+    env_only, probs_env_only = load_config(
+        {"home": valid_home},
+        environ={"PHLIGHT_HOME_LAT": "5.5", "PHLIGHT_HOME_LON": "6.5"},
+    )
+    assert env_only.home == HomeLocation(lat=5.5, lon=6.5)
+    assert probs_env_only == ()
+
+
+def test_load_config_invalid_env_distance_falls_back_to_valid_mapping() -> None:
+    """Catches dropping a valid mapping distance gate when PHLIGHT_MAX_DISTANCE_KM is invalid (contract §13.2 fallback rule)."""
+    mapping: dict[str, Any] = {
+        "home": {"lat": 1.0, "lon": 2.0},
+        "selection": {"max_distance_km": 20.0},
+    }
+
+    for bad in ("bad", "0", "-3", "nan", "inf"):
+        cfg, probs = load_config(mapping, environ={"PHLIGHT_MAX_DISTANCE_KM": bad})
+        assert cfg.max_distance_km == pytest.approx(20.0, abs=1e-9), bad
+        assert probs == ("max_distance_invalid",), bad
+
+    # Unparseable mapping value falls back to the documented default 15.0.
+    cfg_default, probs_default = load_config(
+        {"home": {"lat": 1.0, "lon": 2.0}, "selection": {"max_distance_km": "20"}},
+        environ={"PHLIGHT_MAX_DISTANCE_KM": "bad"},
+    )
+    assert cfg_default.max_distance_km == pytest.approx(15.0, abs=1e-9)
+    assert probs_default == ("max_distance_invalid",)
+
+
+def test_load_source_path_invalid_env_falls_back_to_valid_mapping() -> None:
+    """Catches dropping a valid mapping source path when PHLIGHT_AIRCRAFT_JSON is blank (contract §13.2 fallback rule)."""
+    mapping: dict[str, Any] = {"source": {"aircraft_json": "/run/dump1090-fa/aircraft.json"}}
+
+    for bad in ("", "   "):
+        path, probs = load_source_path(mapping, environ={"PHLIGHT_AIRCRAFT_JSON": bad})
+        assert path == "/run/dump1090-fa/aircraft.json", repr(bad)
+        assert probs == ("source_path_invalid",), repr(bad)
+
+
 def test_result_state_precedence_order() -> None:
     """Catches wrong state precedence when multiple failure conditions hold simultaneously (contract §7)."""
     missing_snap = SourceSnapshot(

@@ -585,6 +585,18 @@ are typed. The two paths are therefore specified separately:
   input to `load_config()` records `config_not_mapping` in both the returned
   problem tuple and `SelectionConfig.problems`.
 
+The environment-to-mapping fallback is per setting, and for the home it is per
+coordinate: `PHLIGHT_HOME_LAT` that fails to parse records `home_lat_invalid`
+once and keeps a valid `home.lat` from the mapping, so the home stays
+configured; `PHLIGHT_HOME_LAT=bad` with no valid `home.lat` leaves the latitude
+unresolvable and the home `None`. Latitude and longitude are resolved
+independently, so a bad `PHLIGHT_HOME_LAT` does not suppress a valid
+`PHLIGHT_HOME_LON` or the `home_lon_invalid` diagnosis. The same single-fallback
+rule applies to `PHLIGHT_MAX_DISTANCE_KM` (falls back to
+`selection.max_distance_km`, else 15.0) and `PHLIGHT_AIRCRAFT_JSON` (falls back
+to `source.aircraft_json`, else the default path): each records its problem code
+at most once.
+
 Other problem codes: `home_invalid` (home block not a table), `selection_invalid`
 (selection block not a table), `max_position_age_invalid`,
 `max_message_age_invalid`, `max_snapshot_age_invalid`, `ignore_ground_invalid`,

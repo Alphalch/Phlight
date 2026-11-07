@@ -82,6 +82,38 @@ def _env_number(
     return (number if is_finite_number(number) else None, True)
 
 
+def _resolve_coordinate(
+    environ: Mapping[str, str],
+    env_name: str,
+    limit_type: str,
+    limit: float,
+    raw: object,
+    problem: str,
+    problems: list[str],
+) -> float | None:
+    """Resolve one home coordinate from the environment, then the mapping.
+
+    Contract §13.2: a valid environment value overrides the mapping without a
+    problem code, while an invalid environment value records that setting's code
+    exactly once and *falls back* to the mapping value when the mapping value is
+    itself a valid coordinate. Only when neither source yields a usable number
+    does the coordinate end up unresolvable (``None``), which leaves the home
+    unusable. Falling back instead of discarding the home is what makes a typo
+    in ``PHLIGHT_HOME_LAT`` a diagnostic rather than a silent loss of the
+    configured position.
+    """
+
+    env_value, present = _env_number(environ, env_name, limit_type)
+    if env_value is not None:
+        return env_value
+    fallback = (
+        _coordinate(raw, limit) if raw is not _MISSING and raw is not None else None
+    )
+    if present or fallback is None:
+        problems.append(problem)
+    return fallback
+
+
 def load_config(
     mapping: Mapping[str, Any],
     *,
@@ -91,7 +123,9 @@ def load_config(
 
     Returns ``(config, problems)``. ``problems`` is empty when everything was
     usable. A bad setting keeps its default; a bad home block yields
-    ``home=None``.
+    ``home=None``. An invalid environment value records its problem code and
+    falls back to that setting's valid mapping value, or to the default when the
+    mapping value is unusable too (contract §13.2).
     """
 
     environ = os.environ if environ is None else environ
@@ -121,39 +155,32 @@ def load_config(
         home_configured = True
 
     if home_configured and home_usable:
-        lat_value, lat_present = _env_number(environ, ENV_HOME_LAT, "coordinate_lat")
-        if lat_present:
-            if lat_value is None:
-                problems.append("home_lat_invalid")
-                home_usable = False
-            else:
-                home_lat = lat_value
+        # Each coordinate is resolved independently: environment first, then the
+        # structured mapping as the §13.2 fallback for an invalid environment
+        # value, then "absent" (which leaves the home unusable).
+        resolved_lat = _resolve_coordinate(
+            environ,
+            ENV_HOME_LAT,
+            "coordinate_lat",
+            90.0,
+            home_lat,
+            "home_lat_invalid",
+            problems,
+        )
+        resolved_lon = _resolve_coordinate(
+            environ,
+            ENV_HOME_LON,
+            "coordinate_lon",
+            180.0,
+            home_lon,
+            "home_lon_invalid",
+            problems,
+        )
+        if resolved_lat is None or resolved_lon is None:
+            home_usable = False
         else:
-            parsed_lat = (
-                _coordinate(home_lat, 90.0) if home_lat is not _MISSING else None
-            )
-            if parsed_lat is None:
-                problems.append("home_lat_invalid")
-                home_usable = False
-            else:
-                home_lat = parsed_lat
-
-        lon_value, lon_present = _env_number(environ, ENV_HOME_LON, "coordinate_lon")
-        if lon_present:
-            if lon_value is None:
-                problems.append("home_lon_invalid")
-                home_usable = False
-            else:
-                home_lon = lon_value
-        else:
-            parsed_lon = (
-                _coordinate(home_lon, 180.0) if home_lon is not _MISSING else None
-            )
-            if parsed_lon is None:
-                problems.append("home_lon_invalid")
-                home_usable = False
-            else:
-                home_lon = parsed_lon
+            home_lat = resolved_lat
+            home_lon = resolved_lon
 
     home: HomeLocation | None = None
     if home_usable and home_lat is not _MISSING and home_lon is not _MISSING:
