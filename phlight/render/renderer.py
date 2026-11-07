@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Sequence
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -169,17 +169,6 @@ def _paint_text(
         x -= mask.width // 2
     canvas.paste(colour, (int(x), int(y)), mask)
     return mask.width, mask.height
-
-
-def _paint_polygon(canvas: Image.Image, points: Sequence[tuple[float, float]], colour) -> None:
-    mask = Image.new("L", canvas.size, 0)
-    ImageDraw.Draw(mask).polygon(list(points), fill=255)
-    canvas.paste(colour, (0, 0), mask)
-
-
-# --------------------------------------------------------------------------- #
-# background
-# --------------------------------------------------------------------------- #
 
 
 def _paint_sky(canvas: Image.Image, layout: _Layout, palette: Palette) -> None:

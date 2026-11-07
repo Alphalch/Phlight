@@ -23,7 +23,7 @@ import sys
 from dataclasses import replace
 from typing import Sequence
 
-from .config import MIN_CANVAS_PX, RenderConfig
+from .config import RenderConfig
 from .models import SnapshotError, load_snapshot
 from .palette import PALETTES, palette_by_name
 from .renderer import render_to_path
