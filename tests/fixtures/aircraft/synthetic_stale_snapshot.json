@@ -1,0 +1,17 @@
+{
+  "now": 1759999980.0,
+  "messages": 1024,
+  "aircraft": [
+    {
+      "hex": "780abc",
+      "flight": "CPA888  ",
+      "alt_baro": 10000,
+      "gs": 300.0,
+      "track": 120.0,
+      "lat": 22.3193,
+      "lon": 114.1694,
+      "seen_pos": 0.2,
+      "seen": 0.1
+    }
+  ]
+}

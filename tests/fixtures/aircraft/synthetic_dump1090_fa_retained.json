@@ -1,0 +1,61 @@
+{
+  "now": 1760000000.0,
+  "messages": 540210,
+  "aircraft": [
+    {
+      "hex": "780c01",
+      "flight": "CRK880  ",
+      "alt_baro": 4500,
+      "gs": 210.0,
+      "track": 140.0,
+      "lat": 22.3193,
+      "lon": 114.1694,
+      "seen_pos": 240.0,
+      "seen": 238.5,
+      "messages": 1200,
+      "rssi": -19.2
+    },
+    {
+      "hex": "780c02",
+      "flight": "HKE601  ",
+      "alt_baro": 5200,
+      "gs": 235.0,
+      "track": 255.0,
+      "lat": 22.3200,
+      "lon": 114.1700,
+      "seen_pos": 45.0,
+      "seen": 0.2,
+      "messages": 940,
+      "rssi": -11.0
+    },
+    {
+      "hex": "780c03",
+      "flight": "TUG04   ",
+      "alt_baro": 0,
+      "gs": 5.0,
+      "track": 180.0,
+      "lat": 22.3193,
+      "lon": 114.1694,
+      "seen_pos": 0.3,
+      "seen": 0.1,
+      "messages": 600,
+      "rssi": -4.0
+    },
+    {
+      "hex": "780dfa",
+      "flight": "BAW31   ",
+      "alt_baro": 9800,
+      "gs": 290.0,
+      "track": 65.5,
+      "category": "A5",
+      "lat": 22.3643,
+      "lon": 114.1694,
+      "seen_pos": 1.5,
+      "seen": 0.5,
+      "messages": 1850,
+      "rssi": -7.8,
+      "modea": true,
+      "modec": true
+    }
+  ]
+}
