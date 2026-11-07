@@ -12,6 +12,36 @@ Phlight is a planned framed 7.3-inch color e-paper portrait showing aircraft det
 
 These choices are provisional until the hardware is tested. Aircraft outside receiver coverage or without usable position reports will not appear. A continuously powered receiver does not imply continuous e-paper refresh.
 
+## Software: portrait renderer (implemented)
+
+`phlight/render/` is the composition stage, as an offline, deterministic
+renderer: local aircraft JSON in, one PNG out.
+
+```bash
+python -m pip install pillow pytest
+python -m phlight.render.cli fixtures/overhead_snapshot.json --out out/portrait.png
+python -m phlight.render.cli fixtures/empty_sky_snapshot.json --out out/empty.png --palette dusk
+python -m phlight.render.cli fixtures/overhead_snapshot.json --out out/stale.png --palette spectra6 --now 1762501800
+python -m pytest
+```
+
+- Canvas size and palette are configuration, not constants: `--width`,
+  `--height`, `--palette` (`ink`, `spectra6`, `dusk`, or a custom `Palette`).
+- Three explicit states: `current`, `empty` (nothing overhead, or forced) and
+  `stale` (snapshot older than the caller's threshold, labelled on the image).
+- Artwork is original parametric geometry generated in this repository; text
+  uses the Aileron font bundled inside Pillow. No third-party or FlightPortrait
+  artwork is redistributed.
+- Data model, interface, palette roles, and limitations:
+  [docs/portrait-renderer.md](docs/portrait-renderer.md).
+
+| portrait, `spectra6` | empty sky, `dusk` |
+| --- | --- |
+| ![portrait](docs/samples/portrait-spectra6.png) | ![empty sky](docs/samples/empty-sky-dusk.png) |
+
+No display panel has been selected and nothing here has been rendered to
+e-paper hardware; these are RGB previews, not panel validation.
+
 ## Work tracking
 
 The dedicated Hermes Kanban board is `phlight`. The first tasks cover hardware research, receiver ingestion, artwork/rendering, enclosure integration, and end-to-end verification. See [project brief](docs/project-brief.md) for acceptance criteria.
@@ -22,4 +52,8 @@ The dedicated Hermes Kanban board is `phlight`. The first tasks cover hardware r
 
 ## Status
 
-Project started; no working receiver, display driver, artwork, enclosure, or end-to-end prototype has been verified yet. No hardware has been purchased.
+Project started; no working receiver, display driver, enclosure, or end-to-end
+prototype has been verified yet. No hardware has been purchased. The offline
+portrait renderer exists, has automated tests, and produces sample images
+([docs/portrait-renderer.md](docs/portrait-renderer.md)), but it has never been
+displayed on a physical panel.
