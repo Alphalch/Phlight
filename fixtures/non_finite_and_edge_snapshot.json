@@ -1,0 +1,63 @@
+{
+  "captured_at": 1762501200,
+  "source": "synthetic deterministic fixture: non-finite strings, tilde non-ICAO hex, booleans, and non-object entries (not live ADS-B data)",
+  "aircraft": [
+    null,
+    "not-an-object",
+    {"hex": ""},
+    {"hex": "780g1b"},
+    {
+      "hex": "~abcdef",
+      "callsign": "TISB01",
+      "type_code": "C172",
+      "altitude_ft": 3400,
+      "distance_km": 1.8,
+      "bearing_deg": 90.0,
+      "track_deg": 90.0,
+      "ground_speed_kt": 115,
+      "seen_at": 1762501199.0
+    },
+    {
+      "hex": "abc101",
+      "callsign": "NANALT",
+      "type_code": "B738",
+      "altitude_ft": "nan",
+      "distance_km": 2.4,
+      "bearing_deg": 45.0,
+      "track_deg": 45.0,
+      "ground_speed_kt": 210
+    },
+    {
+      "hex": "abc102",
+      "callsign": "NANDST",
+      "type_code": "A320",
+      "altitude_ft": 5000,
+      "distance_km": "nan",
+      "bearing_deg": 180.0,
+      "track_deg": 180.0,
+      "ground_speed_kt": 220
+    },
+    {
+      "hex": "abc103",
+      "callsign": "INFTRK",
+      "type_code": "E190",
+      "altitude_ft": 6000,
+      "distance_km": 3.5,
+      "bearing_deg": "nan",
+      "track_deg": "inf",
+      "ground_speed_kt": "inf",
+      "seen_at": "-inf"
+    },
+    {
+      "hex": "abc104",
+      "callsign": "BOOLFD",
+      "type_code": "AT76",
+      "altitude_ft": true,
+      "distance_km": false,
+      "bearing_deg": true,
+      "track_deg": false,
+      "ground_speed_kt": true,
+      "seen_at": false
+    }
+  ]
+}

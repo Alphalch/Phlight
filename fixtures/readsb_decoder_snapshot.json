@@ -1,0 +1,81 @@
+{
+  "now": 1762500000.0,
+  "messages": 1420,
+  "aircraft": [
+    {
+      "hex": "780001",
+      "flight": "GND001  ",
+      "alt_baro": "ground",
+      "gs": 12.0,
+      "track": 10.0,
+      "lat": 22.3376,
+      "lon": 114.1832,
+      "seen": 0.2,
+      "seen_pos": 0.2,
+      "category": "A1",
+      "type": "adsb_icao"
+    },
+    {
+      "hex": "780002",
+      "flight": "NOPOS1  ",
+      "alt_baro": 4000,
+      "gs": 200.0,
+      "track": 45.0,
+      "seen": 0.5,
+      "category": "A3",
+      "type": "adsb_icao"
+    },
+    {
+      "hex": "780003",
+      "flight": "STLPOS  ",
+      "alt_baro": 5500,
+      "gs": 210.0,
+      "track": 80.0,
+      "lat": 22.3380,
+      "lon": 114.1840,
+      "seen": 1.0,
+      "seen_pos": 14.5,
+      "category": "A3",
+      "type": "adsb_icao"
+    },
+    {
+      "hex": "780004",
+      "flight": "FAROUT  ",
+      "alt_baro": 31000,
+      "gs": 460.0,
+      "track": 270.0,
+      "lat": 22.5500,
+      "lon": 114.4000,
+      "seen": 0.4,
+      "seen_pos": 0.8,
+      "category": "A5",
+      "type": "adsb_icao"
+    },
+    {
+      "hex": "780912",
+      "flight": "HDA812  ",
+      "alt_baro": 2175,
+      "gs": 164.0,
+      "track": 295.0,
+      "lat": 22.3490,
+      "lon": 114.1730,
+      "seen": 0.8,
+      "seen_pos": 1.2,
+      "category": "A3",
+      "type": "adsb_icao"
+    },
+    {
+      "hex": "~abcdef",
+      "flight": "TISB01  ",
+      "alt_baro": 3400,
+      "gs": 180.0,
+      "track": 90.0,
+      "lat": 22.3600,
+      "lon": 114.1831,
+      "seen": 0.5,
+      "seen_pos": 1.0,
+      "category": "A1",
+      "type": "tisb_other"
+    }
+  ]
+}

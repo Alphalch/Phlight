@@ -1,0 +1,73 @@
+{
+  "captured_at": 1762500000,
+  "source": "hand-authored deterministic fixture, not live receiver data",
+  "home": {"lat": 22.3375, "lon": 114.1831, "label": "recorded fixture location"},
+  "aircraft": [
+    {
+      "hex": "780a1b",
+      "callsign": "CPA715",
+      "registration": "B-KPF",
+      "type_code": "A333",
+      "type_name": "Airbus A330-300",
+      "operator": "Cathay Pacific",
+      "altitude_ft": 11250,
+      "distance_km": 4.2,
+      "bearing_deg": 38.0,
+      "track_deg": 52.0,
+      "ground_speed_kt": 287,
+      "seen_at": 1762499994.0
+    },
+    {
+      "hex": "780912",
+      "callsign": "HDA812",
+      "registration": "B-HLO",
+      "type_code": "A21N",
+      "type_name": "Airbus A321neo",
+      "operator": "Cathay Dragon",
+      "altitude_ft": 2175,
+      "distance_km": 1.6,
+      "bearing_deg": 310.0,
+      "track_deg": 295.0,
+      "ground_speed_kt": 164,
+      "seen_at": 1762499997.0
+    },
+    {
+      "hex": "7c1a2b",
+      "callsign": "VHABC",
+      "registration": "VH-ABC",
+      "type_code": "C172",
+      "type_name": "Cessna 172",
+      "operator": null,
+      "altitude_ft": 3200,
+      "distance_km": 9.8,
+      "bearing_deg": 182.0,
+      "track_deg": 181.0,
+      "ground_speed_kt": 98,
+      "seen_at": 1762499990.0
+    },
+    {
+      "hex": "8990a1",
+      "callsign": "EVA18",
+      "type_code": "B77W",
+      "type_name": "Boeing 777-300ER",
+      "operator": "EVA Air",
+      "altitude_ft": 35000,
+      "distance_km": 42.5,
+      "bearing_deg": 95.0,
+      "track_deg": 270.0,
+      "ground_speed_kt": 482,
+      "seen_at": 1762499995.0
+    },
+    {
+      "hex": "7c9b1f",
+      "callsign": "HELI1",
+      "type_code": "EC35",
+      "altitude_ft": 1200,
+      "distance_km": 2.9,
+      "bearing_deg": 20.0,
+      "track_deg": 10.0,
+      "ground_speed_kt": 112,
+      "seen_at": 1762499999.0
+    }
+  ]
+}

@@ -9,10 +9,13 @@ description = "A framed portrait of the aircraft flying overhead, built from a l
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
-dependencies = []
+dependencies = ["pillow>=10.1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+
+[project.scripts]
+phlight-render = "phlight.render.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["phlight"]
